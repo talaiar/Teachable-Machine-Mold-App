@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Model - Mold Prediction</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <h1>Mold Detection Model</h1>
+
+    <!-- Start Button -->
+    <button id="startButton" type="button" onclick="init()">Start</button>
+
+    <!-- Video feed container -->
+    <div id="webcam-container"></div>
+    <div id="resultMessage"></div>
+
+    <!-- Prediction label container -->
+    <div id="label-container">
+        <h3>Prediction Results:</h3>
+    </div>
+
+    <script>
+        const URL = "https://raw.githubusercontent.com/talaiar/AI-EDIT/main/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            try {
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
+
+                // Load the model and metadata
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                // Setup the webcam
+                const flip = true;
+                webcam = new tmImage.Webcam(200, 200, flip);
+                await webcam.setup();
+                await webcam.play();
+                window.requestAnimationFrame(loop);
+
+                // Append webcam to the DOM
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                labelContainer = document.getElementById("label-container");
+
+                // Clear label container and add divs for each prediction
+                labelContainer.innerHTML = "<h3>Prediction Results:</h3>";
+                for (let i = 0; i < maxPredictions; i++) {
+                    const predictionElement = document.createElement("div");
+                    predictionElement.classList.add("prediction");
+                    labelContainer.appendChild(predictionElement);
+                }
+            } catch (error) {
+                console.error('Error initializing the model or accessing the webcam:', error);
+                alert('Failed to access webcam or load model. Check console for details.');
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const predictions = await model.predict(webcam.canvas);
+
+            // Display all predictions with probabilities
+            predictions.forEach((prediction, index) => {
+                const classPrediction = `${prediction.className}: ${Math.round(prediction.probability * 100)}%`;
+                labelContainer.childNodes[index + 1].innerHTML = classPrediction;
+            });
+     
